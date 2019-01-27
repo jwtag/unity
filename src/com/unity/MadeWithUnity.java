@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -32,6 +33,54 @@ public class MadeWithUnity extends HttpServlet {
         GetURLs();
     }
     
+    private void CreatePage(HttpServletResponse response, String site) throws IOException {
+    	Document currpage = Jsoup.connect("https://unity.com/madewith/" + site).get();
+    	Elements header = currpage.getElementsByTag("meta");
+    	String title = "";
+    	for (Element h : header) {
+    		if (h.attr("name").equals("title")) {
+    			title = h.attr("content");
+    			break;
+    		}
+    	}
+        Elements imgs = currpage.getElementsByTag("img");
+        Elements ps = currpage.getElementsByTag("p");
+        Elements links = currpage.getElementsByTag("a");
+        Elements vids = currpage.getElementsByTag("div");
+        response.setContentType("text/html");
+		PrintWriter printWriter = response.getWriter();
+		
+		printWriter.println("<h1>" + title + "</h1>");
+		
+		// Print vids
+		/*printWriter.println("<h2>VIDEOS</h2>");
+        for (Element v : vids) {
+        	if (v.attr("class").contains("section-trailer embed"))
+    		printWriter.println(v.attr("iframe"));		
+        }*/
+		
+		// Print imgs
+		printWriter.println("<h2>IMGS</h2>");
+        for (Element i : imgs) {
+        	String src = i.attr("src");
+        	if (!src.contains("https://unity.com")) src = "https://unity.com/" + src;
+    		printWriter.println("<img src=\"" + src +"\">");		
+        }
+        
+        // Print text
+		printWriter.println("<h2>TEXT</h2>");
+        for (Element p : ps) {
+    		printWriter.println("<p>" + p + "</p>");		
+        }
+        
+        // Print text
+ 		printWriter.println("<h2>LINKS</h2>");
+        for (Element l : links) {
+     	   String href = l.attr("href");
+     	   if (!href.contains("https://unity.com") && !href.contains("https://unity3d.com")) href = "https://unity.com/" + href;
+ 		   printWriter.println("<a href=\"" + href + "\">" + href + "</a><br>");		
+        }
+    }
     
     /**
      * Stores the projects on the MWU site in projects
@@ -53,9 +102,23 @@ public class MadeWithUnity extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
+		Cookie curr = null;
+		Cookie[] cookies = request.getCookies(); // Check if client has cookie.
+		for (Cookie c : cookies) {
+			if (c.getName().equals("curr_site")) {
+				curr = c;
+				int curr_index = Integer.parseInt(c.getValue());
+				if (curr_index == projects.size() - 1) c.setValue(0 + "");
+				else c.setValue((curr_index + 1) + "");
+			}
+		}
+		
+		if (curr == null) {
+			curr = new Cookie("curr_site", "0");
+		}
+		response.addCookie(curr);
+		CreatePage(response, projects.get(Integer.parseInt(curr.getValue())));
 		PrintWriter printWriter = response.getWriter();
-		printWriter.println(projects.toString());		
-		response.getWriter().append("Served at: ").append(request.getContextPath());
 	}
 
 	/**
