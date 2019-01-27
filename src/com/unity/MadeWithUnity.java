@@ -47,6 +47,8 @@ public class MadeWithUnity extends HttpServlet {
         Elements ps = currpage.getElementsByTag("p");
         Elements links = currpage.getElementsByTag("a");
         Elements vids = currpage.getElementsByTag("div");
+        Elements scripts = currpage.getElementsByTag("script");
+
         response.setContentType("text/html");
 		PrintWriter printWriter = response.getWriter();
 		
@@ -57,6 +59,12 @@ public class MadeWithUnity extends HttpServlet {
         for (Element v : vids) {
         	if (v.attr("class").contains("section-trailer embed"))
     		printWriter.println(v.attr("iframe"));		
+        }
+		
+		// Print scripts
+		printWriter.println("<h2>SCRIPTS</h2>");
+        for (Element s : scripts) {
+    		printWriter.println("<script type=\"text/javascript\">" + s + "</script>");		
         }*/
 		
 		// Print imgs
@@ -73,7 +81,7 @@ public class MadeWithUnity extends HttpServlet {
     		printWriter.println("<p>" + p + "</p>");		
         }
         
-        // Print text
+        // Print links
  		printWriter.println("<h2>LINKS</h2>");
         for (Element l : links) {
      	   String href = l.attr("href");
@@ -104,15 +112,16 @@ public class MadeWithUnity extends HttpServlet {
 		response.setContentType("text/html");
 		Cookie curr = null;
 		Cookie[] cookies = request.getCookies(); // Check if client has cookie.
-		for (Cookie c : cookies) {
-			if (c.getName().equals("curr_site")) {
-				curr = c;
-				int curr_index = Integer.parseInt(c.getValue());
-				if (curr_index == projects.size() - 1) c.setValue(0 + "");
-				else c.setValue((curr_index + 1) + "");
+		if (cookies != null) {
+			for (Cookie c : cookies) {
+				if (c.getName().equals("curr_site")) {
+					curr = c;
+					int curr_index = Integer.parseInt(c.getValue());
+					if (curr_index == projects.size() - 1) c.setValue(0 + "");
+					else c.setValue((curr_index + 1) + "");
+				}
 			}
 		}
-		
 		if (curr == null) {
 			curr = new Cookie("curr_site", "0");
 		}
