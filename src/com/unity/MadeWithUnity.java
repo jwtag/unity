@@ -2,7 +2,6 @@ package com.unity;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -33,8 +32,16 @@ public class MadeWithUnity extends HttpServlet {
         GetURLs();
     }
     
+    /**
+     * Creates and writes the webpage specified by the passed site to the passed response.
+     * @param response The response the webpage is being written to.
+     * @param site The site from which the content is being pulled.
+     * @throws IOException If Jsoup.connect() fails
+     */
     private void CreatePage(HttpServletResponse response, String site) throws IOException {
     	Document currpage = Jsoup.connect("https://unity.com/madewith/" + site).get();
+    	
+    	//Get the title of the project.
     	Elements header = currpage.getElementsByTag("meta");
     	String title = "";
     	for (Element h : header) {
@@ -43,55 +50,56 @@ public class MadeWithUnity extends HttpServlet {
     			break;
     		}
     	}
+    	
+    	// Get the content.
         Elements imgs = currpage.getElementsByTag("img");
         Elements ps = currpage.getElementsByTag("p");
         Elements links = currpage.getElementsByTag("a");
         Elements vids = currpage.getElementsByTag("div");
-        Elements scripts = currpage.getElementsByTag("script");
 
         response.setContentType("text/html");
 		PrintWriter printWriter = response.getWriter();
 		
 		printWriter.println("<h1>" + title + "</h1>");
 		
-		// Print vids
-		/*printWriter.println("<h2>VIDEOS</h2>");
-        for (Element v : vids) {
-        	if (v.attr("class").contains("section-trailer embed"))
-    		printWriter.println(v.attr("iframe"));		
+		// Add vids to the response
+		boolean hasVids = false;
+		printWriter.println("<h2>VIDEOS</h2>");
+        for (Element v : vids) { // Vimeo vid id's are stored in vm-video divs under the data-vm field.
+        	if (v.attr("class").equals("vm-video")) {
+        		hasVids = true;
+        		printWriter.println("<iframe src=\"https://player.vimeo.com/video/" + v.attr("data-vm") + "?autoplay=1\" width=\"640\" height=\"360\" frameborder=\"0\" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>");		
+        	}
+        }
+        if (!hasVids) {
+        	printWriter.println("<h3>(this title has no videos!)</h3>");
         }
 		
-		// Print scripts
-		printWriter.println("<h2>SCRIPTS</h2>");
-        for (Element s : scripts) {
-    		printWriter.println("<script type=\"text/javascript\">" + s + "</script>");		
-        }*/
-		
-		// Print imgs
+		// Print imgs to the response
 		printWriter.println("<h2>IMGS</h2>");
         for (Element i : imgs) {
         	String src = i.attr("src");
-        	if (!src.contains("https://unity.com")) src = "https://unity.com/" + src;
+        	if (!src.contains("https://unity.com")) src = "https://unity.com/" + src;  // Add unity.com to the source urls if not present
     		printWriter.println("<img src=\"" + src +"\">");		
         }
         
-        // Print text
+        // Print text to the response
 		printWriter.println("<h2>TEXT</h2>");
         for (Element p : ps) {
     		printWriter.println("<p>" + p + "</p>");		
         }
         
-        // Print links
+        // Print links to the response
  		printWriter.println("<h2>LINKS</h2>");
         for (Element l : links) {
      	   String href = l.attr("href");
-     	   if (!href.contains("https://unity.com") && !href.contains("https://unity3d.com")) href = "https://unity.com/" + href;
+     	   if (!href.contains("https://unity.com") && !href.contains("https://unity3d.com")) href = "https://unity.com/" + href;  // Add unity.com to the source urls if not present
  		   printWriter.println("<a href=\"" + href + "\">" + href + "</a><br>");		
         }
     }
     
     /**
-     * Stores the projects on the MWU site in projects
+     * Stores the projects on the MWU site in the ArrayList<> projects
      * @throws IOException if connect doesn't work.
      */
     private void GetURLs() throws IOException {
@@ -111,10 +119,10 @@ public class MadeWithUnity extends HttpServlet {
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
 		Cookie curr = null;
-		Cookie[] cookies = request.getCookies(); // Check if client has cookie.
+		Cookie[] cookies = request.getCookies(); // Check if client has cookie.  Cookie value = index in projects.
 		if (cookies != null) {
 			for (Cookie c : cookies) {
-				if (c.getName().equals("curr_site")) {
+				if (c.getName().equals("curr_site") && !c.getValue().contentEquals("unruly-heroes")) {
 					curr = c;
 					int curr_index = Integer.parseInt(c.getValue());
 					if (curr_index == projects.size() - 1) c.setValue(0 + "");
@@ -127,7 +135,6 @@ public class MadeWithUnity extends HttpServlet {
 		}
 		response.addCookie(curr);
 		CreatePage(response, projects.get(Integer.parseInt(curr.getValue())));
-		PrintWriter printWriter = response.getWriter();
 	}
 
 	/**
